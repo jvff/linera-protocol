@@ -1,0 +1,23 @@
+[package]
+name = "witty"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+log = ["dep:log"]
+macros = ["try-insert-ext", "witty-macros"]
+wasmer = ["dep:wasmer", "wasmer-vm", "witty-macros?/wasmer"]
+wasmtime = ["anyhow", "dep:wasmtime", "witty-macros?/wasmtime"]
+
+[dependencies]
+anyhow = { version = "1.0.70", optional = true }
+either = "1.8.1"
+frunk = "0.4.1"
+int-conv = "0.1.4"
+log = { version = "0.4.18", optional = true }
+thiserror = "1.0.40"
+try-insert-ext = { version = "0.1.0", optional = true }
+witty-macros = { path = "./procedural-macros", optional = true }
+wasmer = { version = "3.1.1", optional = true }
+wasmer-vm = { version = "3.1.1", optional = true }
+wasmtime = { version = "8.0.0", optional = true }
