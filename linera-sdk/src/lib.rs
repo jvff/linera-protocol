@@ -64,6 +64,8 @@ pub use self::{
     log::{ContractLogger, ServiceLogger},
 };
 pub use linera_base::ensure;
+#[cfg(feature = "macros")]
+pub use linera_sdk_macros::application_state;
 #[doc(hidden)]
 pub use wit_bindgen_guest_rust;
 

@@ -18,6 +18,8 @@ features = ["test", "wasmer"]
 targets = ["wasm32-unknown-unknown", "x86_64-unknown-linux-gnu"]
 
 [features]
+default = ["macros"]
+macros = ["linera-sdk-macros"]
 wasmer = ["linera-core/wasmer", "linera-execution/wasmer", "linera-storage/wasmer"]
 wasmtime = ["linera-core/wasmtime", "linera-execution/wasmtime", "linera-storage/wasmtime"]
 test = []
@@ -30,6 +32,7 @@ futures = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
 linera-base = { workspace = true }
+linera-sdk-macros = { workspace = true, optional = true }
 linera-views = { workspace = true }
 wit-bindgen-guest-rust = { workspace = true }
 

@@ -7,7 +7,10 @@ mod conversions_from_wit;
 mod system_api;
 
 pub use self::system_api::ViewStorageContext;
-pub use linera_views::*;
+pub use linera_views::{
+    views::{GraphQLView, RootView, View},
+    *,
+};
 
 // Import the views system interface.
 wit_bindgen_guest_rust::import!("view_system.wit");
