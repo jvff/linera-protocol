@@ -11,10 +11,11 @@ use fungible::{Account, AccountOwner, Destination};
 use linera_sdk::{
     base::{Amount, SessionId},
     contract::system_api,
-    ensure, ApplicationCallResult, CalleeContext, Contract, EffectContext, ExecutionResult,
-    FromBcsBytes, OperationContext, Session, SessionCallResult, ViewStateStorage,
+    ensure,
+    views::View,
+    ApplicationCallResult, CalleeContext, Contract, EffectContext, ExecutionResult, FromBcsBytes,
+    OperationContext, Session, SessionCallResult, ViewStateStorage,
 };
-use linera_views::views::View;
 use state::{CrowdFunding, Status};
 use thiserror::Error;
 

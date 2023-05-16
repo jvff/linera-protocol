@@ -3,10 +3,10 @@
 
 use fungible::AccountOwner;
 use linera_sdk::{
+    application_state,
     base::{Amount, ApplicationId, Timestamp},
-    views::{MapView, RegisterView, ViewStorageContext},
+    views::{MapView, RegisterView},
 };
-use linera_views::views::RootView;
 use serde::{Deserialize, Serialize};
 
 /// The parameters required to create a crowd-funding campaign.
@@ -35,8 +35,7 @@ pub enum Status {
 }
 
 /// The crowd-funding campaign's state.
-#[derive(RootView)]
-#[specific_context = "ViewStorageContext"]
+#[application_state(view)]
 pub struct CrowdFunding {
     /// The status of the campaign.
     pub status: RegisterView<Status>,

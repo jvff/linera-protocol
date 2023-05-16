@@ -731,7 +731,6 @@ dependencies = [
  "bcs",
  "fungible",
  "linera-sdk",
- "linera-views",
  "serde",
  "thiserror",
 ]
@@ -1166,7 +1165,6 @@ dependencies = [
  "bcs",
  "hex",
  "linera-sdk",
- "linera-views",
  "serde",
  "serde_json",
  "thiserror",
@@ -1743,6 +1741,7 @@ dependencies = [
  "linera-chain",
  "linera-core",
  "linera-execution",
+ "linera-sdk-macros",
  "linera-storage",
  "linera-views",
  "linera-wit-bindgen-guest-rust",
@@ -1752,6 +1751,16 @@ dependencies = [
  "serde_json",
  "tokio",
  "wasmtime",
+]
+
+[[package]]
+name = "linera-sdk-macros"
+version = "0.1.0"
+dependencies = [
+ "linera-views-derive",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -2602,7 +2611,6 @@ dependencies = [
  "bcs",
  "futures",
  "linera-sdk",
- "linera-views",
  "thiserror",
  "webassembly-test",
 ]

@@ -9,7 +9,6 @@ async-trait = { workspace = true }
 bcs = { workspace = true }
 fungible = { workspace = true }
 linera-sdk = { workspace = true }
-linera-views = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 

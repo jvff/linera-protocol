@@ -2,16 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use fungible::{AccountOwner, InitialState};
-use linera_sdk::{
-    base::Amount,
-    views::{MapView, ViewStorageContext},
-};
-use linera_views::views::{GraphQLView, RootView};
+use linera_sdk::{application_state, base::Amount, views::MapView};
 use thiserror::Error;
 
 /// The application state.
-#[derive(RootView, GraphQLView)]
-#[specific_context = "ViewStorageContext"]
+#[application_state(view, graphql)]
 pub struct FungibleToken {
     accounts: MapView<AccountOwner, Amount>,
 }

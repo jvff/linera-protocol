@@ -1,13 +1,14 @@
 // Copyright (c) Zefchain Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use linera_sdk::views::{CustomMapView, LogView, ViewStorageContext};
-use linera_views::views::{GraphQLView, RootView};
+use linera_sdk::{
+    application_state,
+    views::{CustomMapView, LogView},
+};
 use social::{Key, OwnPost};
 
 /// The application state.
-#[derive(RootView, GraphQLView)]
-#[specific_context = "ViewStorageContext"]
+#[application_state(view, graphql)]
 pub struct Social {
     /// Our posts.
     pub own_posts: LogView<OwnPost>,

@@ -44,8 +44,12 @@ mod tests {
     use super::Error;
     use crate::ReentrantCounter;
     use futures::FutureExt;
-    use linera_sdk::{base::ChainId, test, views::ViewStorageContext, QueryContext, Service};
-    use linera_views::views::View;
+    use linera_sdk::{
+        base::ChainId,
+        test,
+        views::{View, ViewStorageContext},
+        QueryContext, Service,
+    };
     use std::sync::Arc;
     use webassembly_test::webassembly_test;
 
