@@ -10,6 +10,8 @@ use thiserror::Error;
 
 use crate::doc_scalar;
 
+#[cfg(feature = "wit")]
+use witty::{HList, WitType};
 #[cfg(any(test, feature = "test"))]
 use {
     proptest::{
@@ -464,6 +466,13 @@ impl Signature {
             }
         })
     }
+}
+
+#[cfg(feature = "wit")]
+impl WitType for CryptoHash {
+    const SIZE: u32 = HasherOutputSize::U32;
+
+    type Layout = HList![u64, u64, u64, u64];
 }
 
 #[cfg(any(test, feature = "test"))]

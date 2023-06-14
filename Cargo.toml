@@ -50,7 +50,7 @@ futures = "0.3.24"
 generic-array = { version = "0.14.4", features = ["serde"] }
 hex = "0.4.3"
 http = "0.2.7"
-log = "0.4.17"
+log = "0.4.18"
 lru = "0.9.0"
 metrics = "0.20.1"
 metrics-exporter-tcp = "0.7.0"
@@ -98,10 +98,10 @@ wasm-encoder = "0.24.1"
 wasmer = { version = "=3.1.1", features = ["singlepass"] }
 wasmer-middlewares = "3.1.1"
 wasmparser = "0.101.1"
-wasmtime = "1.0"
+wasmtime = "8.0"
 wit-bindgen-guest-rust = { version = "0.2.0", package = "linera-wit-bindgen-guest-rust" }
 wit-bindgen-host-wasmer-rust = { version = "0.2.0", package = "linera-wit-bindgen-host-wasmer-rust" }
-wit-bindgen-host-wasmtime-rust = { version = "0.2.0", package = "linera-wit-bindgen-host-wasmtime-rust" }
+wit-bindgen-host-wasmtime-rust = { path = "/deps/wit-bindgen/crates/host-wasmtime-rust", package = "linera-wit-bindgen-host-wasmtime-rust" }
 
 linera-base = { version = "0.1.0", path = "./linera-base" }
 linera-chain = { version = "0.1.0", path = "./linera-chain" }
@@ -118,6 +118,8 @@ reentrant-counter = { path = "./examples/reentrant-counter" }
 fungible = { path = "./examples/fungible" }
 crowd-funding = { path = "./examples/crowd-funding" }
 social = { path = "./examples/social" }
+
+witty = { path = "/deps/witty", features = ["macros"] }
 
 [profile.release]
 debug = true

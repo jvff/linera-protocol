@@ -116,7 +116,7 @@ impl<'a> Test<'a> {
             let mut store = Store::new(linker.engine(), Resources::default());
             let instance = linker.instantiate_async(&mut store, test_module).await?;
 
-            let function = instance.get_typed_func::<(), (), _>(&mut store, self.function)?;
+            let function = instance.get_typed_func::<(), ()>(&mut store, self.function)?;
 
             report.result(function.call_async(&mut store, ()).await);
         }
@@ -137,10 +137,10 @@ impl TestReport {
     /// Reports a test result.
     ///
     /// Reports that a test passed if `result` is `Ok` or that it failed otherwise.
-    pub fn result<T>(&mut self, result: Result<T, Trap>) {
+    pub fn result<T>(&mut self, result: Result<T, Error>) {
         match result {
             Ok(_) => self.pass(),
-            Err(trap) => self.fail(trap),
+            Err(error) => self.fail(error),
         }
     }
 
@@ -151,10 +151,10 @@ impl TestReport {
     }
 
     /// Reports that a test failed.
-    pub fn fail(&mut self, trap: Trap) {
+    pub fn fail(&mut self, error: Error) {
         self.failed += 1;
         eprintln!(" FAILED");
-        eprintln!("{}", trap);
+        eprintln!("{}", error);
     }
 
     /// Reports that a test was ignored.

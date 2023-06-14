@@ -12,6 +12,8 @@ use std::str::FromStr;
 
 #[cfg(any(test, feature = "test"))]
 use test_strategy::Arbitrary;
+#[cfg(feature = "wit")]
+use witty::{WitLoad, WitStore, WitType};
 
 /// The owner of a chain. This is currently the hash of the owner's public key used to
 /// verify signatures.
@@ -31,11 +33,13 @@ pub enum ChainDescription {
 /// The unique identifier (UID) of a chain. This is currently computed as the hash value
 /// of a [`ChainDescription`].
 #[derive(Eq, PartialEq, Ord, PartialOrd, Copy, Clone, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "wit", derive(WitLoad, WitType))]
 #[cfg_attr(any(test, feature = "test"), derive(Arbitrary, Default))]
 pub struct ChainId(pub CryptoHash);
 
 /// The index of a message in a chain.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Copy, Clone, Hash, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "wit", derive(WitType))]
 #[cfg_attr(any(test, feature = "test"), derive(Default))]
 pub struct MessageId {
     pub chain_id: ChainId,
@@ -45,6 +49,7 @@ pub struct MessageId {
 
 /// A unique identifier for a user application.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "wit", derive(WitLoad, WitStore, WitType))]
 #[cfg_attr(any(test, feature = "test"), derive(Default))]
 #[serde(rename = "UserApplicationId")]
 pub struct ApplicationId<A = ()> {
@@ -56,6 +61,7 @@ pub struct ApplicationId<A = ()> {
 
 /// A unique identifier for an application bytecode.
 #[derive(Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[cfg_attr(feature = "wit", derive(WitType))]
 #[cfg_attr(any(test, feature = "test"), derive(Default))]
 pub struct BytecodeId<A = ()> {
     pub message_id: MessageId,

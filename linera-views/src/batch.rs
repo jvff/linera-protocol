@@ -16,19 +16,20 @@
 //! not have to deal with batches.
 
 use crate::{
-    common::{Context, KeyIterable},
+    common::{get_interval, Context, KeyIterable},
     memory::{MemoryContext, MemoryContextError},
     views::ViewError,
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
-
-use crate::common::get_interval;
 use std::{
     collections::{BTreeMap, BTreeSet, HashSet},
+    fmt::Debug,
     ops::Bound,
 };
+
+#[cfg(feature = "wit")]
+use witty::{WitStore, WitType};
 
 /// A write operation as requested by a view when it needs to persist staged changes.
 /// There are 3 possibilities for the batch:
@@ -36,6 +37,7 @@ use std::{
 /// * Deletion of all keys matching a specific prefix.
 /// * Insertion or replacement of a key with a value.
 #[derive(Debug)]
+#[cfg_attr(feature = "wit", derive(WitStore, WitType))]
 pub enum WriteOperation {
     /// Delete the given key.
     Delete {

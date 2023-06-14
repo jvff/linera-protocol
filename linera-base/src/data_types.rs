@@ -8,6 +8,8 @@ use thiserror::Error;
 
 #[cfg(any(test, feature = "test"))]
 use test_strategy::Arbitrary;
+#[cfg(feature = "wit")]
+use witty::{WitLoad, WitType};
 
 #[cfg(not(target_arch = "wasm32"))]
 use chrono::NaiveDateTime;
@@ -19,6 +21,7 @@ use crate::doc_scalar;
 /// This is a fixed-point fraction, with [`Amount::DECIMAL_PLACES`] digits after the point.
 /// [`Amount::ONE`] is one whole token, divisible into `10.pow(Amount::DECIMAL_PLACES)` parts.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Copy, Clone, Hash, Default, Debug)]
+#[cfg_attr(feature = "wit", derive(WitLoad, WitType))]
 pub struct Amount(u128);
 
 #[derive(Serialize, Deserialize)]
@@ -54,6 +57,7 @@ impl<'de> Deserialize<'de> for Amount {
 #[derive(
     Eq, PartialEq, Ord, PartialOrd, Copy, Clone, Hash, Default, Debug, Serialize, Deserialize,
 )]
+#[cfg_attr(feature = "wit", derive(WitType))]
 #[cfg_attr(any(test, feature = "test"), derive(Arbitrary))]
 pub struct BlockHeight(pub u64);
 
@@ -67,6 +71,7 @@ pub struct RoundNumber(pub u64);
 #[derive(
     Eq, PartialEq, Ord, PartialOrd, Copy, Clone, Hash, Default, Debug, Serialize, Deserialize,
 )]
+#[cfg_attr(feature = "wit", derive(WitLoad, WitType))]
 pub struct Timestamp(u64);
 
 impl Timestamp {

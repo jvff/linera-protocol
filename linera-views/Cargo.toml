@@ -20,6 +20,7 @@ test = ["anyhow", "tokio/macros", "tokio/parking_lot"]
 aws = ["aws-config", "aws-sdk-dynamodb", "aws-sdk-s3", "aws-smithy-http", "aws-types"]
 db_timings = []
 metrics = ["dep:hex", "dep:metrics"]
+wit = ["witty"]
 
 [dependencies]
 static_assertions = { workspace = true }
@@ -36,6 +37,7 @@ serde = { workspace = true }
 sha3 = { workspace = true }
 thiserror = { workspace = true }
 linked-hash-map = { workspace = true }
+witty = { workspace = true, features = ["macros"], optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { workspace = true, features = ["rt", "sync"] }
