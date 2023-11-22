@@ -18,6 +18,8 @@ pub mod crypto;
 pub mod data_types;
 mod graphql;
 pub mod identifiers;
+#[cfg(feature = "locks")]
+pub mod locks;
 pub mod ownership;
 #[cfg(with_metrics)]
 pub mod prometheus_util;
