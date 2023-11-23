@@ -4,10 +4,11 @@
 
 use std::{borrow::Cow, sync::Arc};
 
-use futures::{future, lock::Mutex};
+use futures::future;
 use linera_base::{
     data_types::{ArithmeticError, Blob, BlockHeight, HashedBlob},
     identifiers::{BlobId, ChainId, MessageId},
+    locks::AsyncMutex,
 };
 use linera_chain::{
     data_types::{
@@ -40,7 +41,7 @@ pub struct LocalNode<S> {
 /// A client to a local node.
 #[derive(Clone)]
 pub struct LocalNodeClient<S> {
-    node: Arc<Mutex<LocalNode<S>>>,
+    node: AsyncMutex<LocalNode<S>>,
 }
 
 /// Error type for the operations on a local node.
@@ -144,7 +145,7 @@ impl<S> LocalNodeClient<S> {
         let node = LocalNode { state };
 
         Self {
-            node: Arc::new(Mutex::new(node)),
+            node: AsyncMutex::new("LocalNode", node),
         }
     }
 }
