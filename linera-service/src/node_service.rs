@@ -1,7 +1,7 @@
 // Copyright (c) Zefchain Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{borrow::Cow, collections::BTreeMap, iter, net::SocketAddr, num::NonZeroU16, sync::Arc};
+use std::{borrow::Cow, collections::BTreeMap, iter, net::SocketAddr, num::NonZeroU16};
 
 use async_graphql::{
     futures_util::Stream,
@@ -14,13 +14,14 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use axum::{extract::Path, http::StatusCode, response, response::IntoResponse, Extension, Router};
 use futures::{
     future::{self},
-    lock::{Mutex, MutexGuard, OwnedMutexGuard},
+    lock::OwnedMutexGuard,
     Future,
 };
 use linera_base::{
     crypto::{CryptoError, CryptoHash, PublicKey},
     data_types::{Amount, ApplicationPermissions, Blob, TimeDelta, Timestamp},
     identifiers::{ApplicationId, BlobId, BytecodeId, ChainId, Owner},
+    locks::{AsyncMutex, AsyncMutexGuard},
     ownership::{ChainOwnership, TimeoutConfig},
     BcsHexParseError,
 };
@@ -59,7 +60,7 @@ pub struct Chains {
 }
 
 pub type ClientMapInner<P, S> = BTreeMap<ChainId, ArcChainClient<P, S>>;
-pub(crate) struct ChainClients<P, S>(Arc<Mutex<ClientMapInner<P, S>>>);
+pub(crate) struct ChainClients<P, S>(AsyncMutex<ClientMapInner<P, S>>);
 
 impl<P, S> Clone for ChainClients<P, S> {
     fn clone(&self) -> Self {
@@ -69,7 +70,7 @@ impl<P, S> Clone for ChainClients<P, S> {
 
 impl<P, S> Default for ChainClients<P, S> {
     fn default() -> Self {
-        Self(Arc::new(Mutex::new(BTreeMap::new())))
+        Self(AsyncMutex::new("ChainClients", BTreeMap::new()))
     }
 }
 
@@ -94,7 +95,7 @@ impl<P, S> ChainClients<P, S> {
             .ok_or_else(|| Error::new(format!("Unknown chain ID: {}", chain_id)))
     }
 
-    pub(crate) async fn map_lock(&self) -> MutexGuard<ClientMapInner<P, S>> {
+    pub(crate) async fn map_lock(&self) -> AsyncMutexGuard<ClientMapInner<P, S>> {
         self.0.lock().await
     }
 }
@@ -114,7 +115,7 @@ pub struct SubscriptionRoot<P, S> {
 /// Our root GraphQL mutation type.
 pub struct MutationRoot<P, S, C> {
     clients: ChainClients<P, S>,
-    context: Arc<Mutex<C>>,
+    context: AsyncMutex<C>,
 }
 
 #[derive(Debug, ThisError)]
@@ -948,7 +949,7 @@ pub struct NodeService<P, S, C> {
     port: NonZeroU16,
     default_chain: Option<ChainId>,
     storage: S,
-    context: Arc<Mutex<C>>,
+    context: AsyncMutex<C>,
 }
 
 impl<P, S: Clone, C> Clone for NodeService<P, S, C> {
@@ -986,7 +987,7 @@ where
             port,
             default_chain,
             storage,
-            context: Arc::new(Mutex::new(context)),
+            context: AsyncMutex::new("NodeService's ClientContext", context),
         }
     }
 

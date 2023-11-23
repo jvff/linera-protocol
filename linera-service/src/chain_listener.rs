@@ -1,18 +1,18 @@
 // Copyright (c) Zefchain Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::btree_map, sync::Arc, time::Duration};
+use std::{collections::btree_map, time::Duration};
 
 use async_trait::async_trait;
 use futures::{
     future::{self, Either},
-    lock::Mutex,
     StreamExt,
 };
 use linera_base::{
     crypto::KeyPair,
     data_types::Timestamp,
     identifiers::{ChainId, Destination},
+    locks::AsyncMutex,
 };
 use linera_chain::data_types::OutgoingMessage;
 use linera_core::{
@@ -87,7 +87,7 @@ where
     }
 
     /// Runs the chain listener.
-    pub async fn run<C>(self, context: Arc<Mutex<C>>, storage: S)
+    pub async fn run<C>(self, context: AsyncMutex<C>, storage: S)
     where
         C: ClientContext<ValidatorNodeProvider = P, Storage = S> + Send + 'static,
     {
@@ -106,7 +106,7 @@ where
     fn run_with_chain_id<C>(
         chain_id: ChainId,
         clients: ChainClients<P, S>,
-        context: Arc<Mutex<C>>,
+        context: AsyncMutex<C>,
         storage: S,
         config: ChainListenerConfig,
     ) where
@@ -124,7 +124,7 @@ where
     async fn run_client_stream<C>(
         chain_id: ChainId,
         clients: ChainClients<P, S>,
-        context: Arc<Mutex<C>>,
+        context: AsyncMutex<C>,
         storage: S,
         config: ChainListenerConfig,
     ) -> anyhow::Result<()>

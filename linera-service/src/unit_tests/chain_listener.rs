@@ -6,11 +6,12 @@
 use std::{collections::BTreeMap, sync::Arc};
 
 use async_trait::async_trait;
-use futures::{lock::Mutex, FutureExt as _};
+use futures::FutureExt as _;
 use linera_base::{
     crypto::{KeyPair, PublicKey},
     data_types::{Amount, BlockHeight, TimeDelta, Timestamp},
     identifiers::{ChainDescription, ChainId},
+    locks::AsyncMutex,
     ownership::{ChainOwnership, TimeoutConfig},
 };
 use linera_core::{
@@ -155,7 +156,7 @@ async fn test_chain_listener() -> anyhow::Result<()> {
     let key_pair = KeyPair::generate_from(&mut rng);
     let public_key = key_pair.public();
     context.update_wallet_for_new_chain(chain_id0, Some(key_pair), clock.current_time());
-    let context = Arc::new(Mutex::new(context));
+    let context = AsyncMutex::new("context", context);
     let listener = ChainListener::new(config, Default::default());
     listener.run(context, storage).await;
 
