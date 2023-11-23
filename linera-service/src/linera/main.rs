@@ -114,7 +114,9 @@ impl Runnable for Job {
                 recipient,
                 amount,
             } => {
-                let chain_client = context.make_chain_client(sender.chain_id).into_arc();
+                let chain_client = context
+                    .make_chain_client(sender.chain_id)
+                    .into_arc(format!("Sender ChainClient({})", sender.chain_id));
                 info!(
                     "Starting transfer of {} native tokens from {} to {}",
                     amount, sender, recipient
@@ -140,7 +142,9 @@ impl Runnable for Job {
                 balance,
             } => {
                 let chain_id = chain_id.unwrap_or_else(|| context.default_chain());
-                let chain_client = context.make_chain_client(chain_id).into_arc();
+                let chain_client = context
+                    .make_chain_client(chain_id)
+                    .into_arc(format!("Parent ChainClient({chain_id})"));
                 let (new_public_key, key_pair) = match public_key {
                     Some(key) => (key, None),
                     None => {
@@ -186,7 +190,9 @@ impl Runnable for Job {
                 application_permissions_config,
             } => {
                 let chain_id = chain_id.unwrap_or_else(|| context.default_chain());
-                let chain_client = context.make_chain_client(chain_id).into_arc();
+                let chain_client = context
+                    .make_chain_client(chain_id)
+                    .into_arc(format!("ChainClient({chain_id})"));
                 info!(
                     "Opening a new multi-owner chain from existing chain {}",
                     chain_id
@@ -237,7 +243,9 @@ impl Runnable for Job {
                 application_permissions_config,
             } => {
                 let chain_id = chain_id.unwrap_or_else(|| context.default_chain());
-                let chain_client = context.make_chain_client(chain_id).into_arc();
+                let chain_client = context
+                    .make_chain_client(chain_id)
+                    .into_arc(format!("ChainClient({chain_id})"));
                 info!("Changing application permissions for chain {}", chain_id);
                 let time_start = Instant::now();
                 let application_permissions =
@@ -259,7 +267,9 @@ impl Runnable for Job {
             }
 
             CloseChain { chain_id } => {
-                let chain_client = context.make_chain_client(chain_id).into_arc();
+                let chain_client = context
+                    .make_chain_client(chain_id)
+                    .into_arc(format!("ChainClient({chain_id})"));
                 info!("Closing chain {}", chain_id);
                 let time_start = Instant::now();
                 let certificate = context
@@ -279,7 +289,9 @@ impl Runnable for Job {
                 channel,
             } => {
                 let subscriber = subscriber.unwrap_or_else(|| context.default_chain());
-                let chain_client = context.make_chain_client(subscriber).into_arc();
+                let chain_client = context
+                    .make_chain_client(subscriber)
+                    .into_arc(format!("Subscriber ChainClient({subscriber})"));
                 let time_start = Instant::now();
                 info!("Subscribing");
                 let certificate = context
@@ -311,7 +323,9 @@ impl Runnable for Job {
                 channel,
             } => {
                 let subscriber = subscriber.unwrap_or_else(|| context.default_chain());
-                let chain_client = context.make_chain_client(subscriber).into_arc();
+                let chain_client = context
+                    .make_chain_client(subscriber)
+                    .into_arc(format!("Subscriber ChainClient({subscriber})"));
                 let time_start = Instant::now();
                 let certificate = context
                     .apply_client_command(&chain_client, |chain_client| async move {
@@ -402,7 +416,9 @@ impl Runnable for Job {
 
             ProcessInbox { chain_id } => {
                 let chain_id = chain_id.unwrap_or_else(|| context.default_chain());
-                let chain_client = context.make_chain_client(chain_id).into_arc();
+                let chain_client = context
+                    .make_chain_client(chain_id)
+                    .into_arc(format!("ChainClient({chain_id})"));
                 info!("Processing the inbox of chain {}", chain_id);
                 let time_start = Instant::now();
                 let certificates = context.process_inbox(&chain_client).await?;
@@ -459,9 +475,10 @@ impl Runnable for Job {
                 // Make sure genesis chains are subscribed to the admin chain.
                 let context = Arc::new(Mutex::new(context));
                 let mut context = context.lock().await;
+                let admin_chain_id = context.wallet().genesis_admin_chain();
                 let chain_client = context
-                    .make_chain_client(context.wallet().genesis_admin_chain())
-                    .into_arc();
+                    .make_chain_client(admin_chain_id)
+                    .into_arc(format!("Genesis Admin ChainClient({admin_chain_id})"));
                 let n = context
                     .process_inbox(&chain_client)
                     .await
@@ -741,7 +758,9 @@ impl Runnable for Job {
             Watch { chain_id, raw } => {
                 let mut join_set = JoinSet::new();
                 let chain_id = chain_id.unwrap_or_else(|| context.default_chain());
-                let chain_client = context.make_chain_client(chain_id).into_arc();
+                let chain_client = context
+                    .make_chain_client(chain_id)
+                    .into_arc(format!("ChainClient({chain_id})"));
                 info!("Watching for notifications for chain {:?}", chain_id);
                 let (listener, _listen_handle, mut notifications) = chain_client.listen().await?;
                 join_set.spawn_task(listener);
@@ -800,7 +819,9 @@ impl Runnable for Job {
                 let start_time = Instant::now();
                 let publisher = publisher.unwrap_or_else(|| context.default_chain());
                 info!("Publishing bytecode on chain {}", publisher);
-                let chain_client = context.make_chain_client(publisher).into_arc();
+                let chain_client = context
+                    .make_chain_client(publisher)
+                    .into_arc(format!("Publisher ChainClient({publisher})"));
                 let bytecode_id = context
                     .publish_bytecode(&chain_client, contract, service)
                     .await?;
@@ -816,7 +837,9 @@ impl Runnable for Job {
                 let start_time = Instant::now();
                 let publisher = publisher.unwrap_or_else(|| context.default_chain());
                 info!("Publishing blob on chain {}", publisher);
-                let chain_client = context.make_chain_client(publisher).into_arc();
+                let chain_client = context
+                    .make_chain_client(publisher)
+                    .into_arc(format!("Publisher ChainClient({publisher})"));
                 let blob_id = context.publish_blob(&chain_client, blob_path).await?;
                 println!("{}", blob_id);
                 info!("{}", "Blob published successfully!".green().bold());
@@ -841,7 +864,7 @@ impl Runnable for Job {
 
                 info!("Synchronizing");
                 chain_client.synchronize_from_validators().await?;
-                let chain_client = chain_client.into_arc();
+                let chain_client = chain_client.into_arc(format!("Creator ChainClient({creator})"));
                 context.process_inbox(&chain_client).await?;
 
                 let (application_id, _) = context
@@ -880,7 +903,9 @@ impl Runnable for Job {
                 let start_time = Instant::now();
                 let publisher = publisher.unwrap_or_else(|| context.default_chain());
                 info!("Publishing and creating application on chain {}", publisher);
-                let chain_client = context.make_chain_client(publisher).into_arc();
+                let chain_client = context
+                    .make_chain_client(publisher)
+                    .into_arc(format!("Publisher ChainClient({publisher})"));
                 let parameters = read_json(json_parameters, json_parameters_path)?;
                 let argument = read_json(json_argument, json_argument_path)?;
 
@@ -919,7 +944,9 @@ impl Runnable for Job {
                 let requester_chain_id =
                     requester_chain_id.unwrap_or_else(|| context.default_chain());
                 info!("Requesting application for chain {}", requester_chain_id);
-                let chain_client = context.make_chain_client(requester_chain_id).into_arc();
+                let chain_client = context
+                    .make_chain_client(requester_chain_id)
+                    .into_arc(format!("Requester ChainClient({requester_chain_id})"));
                 let certificate = context
                     .apply_client_command(&chain_client, |chain_client| async move {
                         chain_client
@@ -965,7 +992,9 @@ impl Runnable for Job {
                     let start_time = Instant::now();
                     let publisher = publisher.unwrap_or_else(|| context.default_chain());
                     info!("Creating application on chain {}", publisher);
-                    let chain_client = context.make_chain_client(publisher).into_arc();
+                    let chain_client = context
+                        .make_chain_client(publisher)
+                        .into_arc(format!("Publisher ChainClient({publisher})"));
 
                     let parameters = read_json(json_parameters, json_parameters_path)?;
                     let argument = read_json(json_argument, json_argument_path)?;

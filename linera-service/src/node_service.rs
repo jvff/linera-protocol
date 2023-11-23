@@ -12,16 +12,12 @@ use async_graphql::{
 };
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use axum::{extract::Path, http::StatusCode, response, response::IntoResponse, Extension, Router};
-use futures::{
-    future::{self},
-    lock::OwnedMutexGuard,
-    Future,
-};
+use futures::{future, Future};
 use linera_base::{
     crypto::{CryptoError, CryptoHash, PublicKey},
     data_types::{Amount, ApplicationPermissions, Blob, TimeDelta, Timestamp},
     identifiers::{ApplicationId, BlobId, BytecodeId, ChainId, Owner},
-    locks::{AsyncMutex, AsyncMutexGuard},
+    locks::{AsyncMutex, AsyncMutexGuard, OwnedAsyncMutexGuard},
     ownership::{ChainOwnership, TimeoutConfig},
     BcsHexParseError,
 };
@@ -82,14 +78,14 @@ impl<P, S> ChainClients<P, S> {
     pub(crate) async fn client_lock(
         &self,
         chain_id: &ChainId,
-    ) -> Option<OwnedMutexGuard<ChainClient<P, S>>> {
+    ) -> Option<OwnedAsyncMutexGuard<ChainClient<P, S>>> {
         Some(self.client(chain_id).await?.0.lock_owned().await)
     }
 
     pub(crate) async fn try_client_lock(
         &self,
         chain_id: &ChainId,
-    ) -> Result<OwnedMutexGuard<ChainClient<P, S>>, Error> {
+    ) -> Result<OwnedAsyncMutexGuard<ChainClient<P, S>>, Error> {
         self.client_lock(chain_id)
             .await
             .ok_or_else(|| Error::new(format!("Unknown chain ID: {}", chain_id)))
@@ -249,11 +245,11 @@ where
         mut f: F,
     ) -> Result<T, Error>
     where
-        F: FnMut(OwnedMutexGuard<ChainClient<P, S>>) -> Fut,
+        F: FnMut(OwnedAsyncMutexGuard<ChainClient<P, S>>) -> Fut,
         Fut: Future<
             Output = (
                 Result<ClientOutcome<T>, Error>,
-                OwnedMutexGuard<ChainClient<P, S>>,
+                OwnedAsyncMutexGuard<ChainClient<P, S>>,
             ),
         >,
     {

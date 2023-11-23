@@ -11,6 +11,7 @@ use linera_base::{
     crypto::*,
     data_types::*,
     identifiers::{Account, ChainDescription, ChainId, MessageId, Owner},
+    locks::AsyncMutex,
     ownership::{ChainOwnership, TimeoutConfig},
 };
 use linera_chain::{
@@ -67,7 +68,7 @@ where
     let sender = builder
         .add_initial_chain(ChainDescription::Root(1), Amount::from_tokens(4))
         .await?;
-    let sender = ArcChainClient::new(sender);
+    let sender = ArcChainClient::new("sender", sender);
     // Listen to the notifications on the sender chain.
     let mut notifications = sender.lock().await.subscribe().await?;
     let (listener, _listen_handle, _) = sender.listen().await?;

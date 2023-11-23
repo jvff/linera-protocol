@@ -141,7 +141,7 @@ where
                 return Ok(());
             };
             let client = context_guard.make_chain_client(chain_id);
-            let client = ArcChainClient::new(client);
+            let client = ArcChainClient::new(format!("ChainClient({chain_id})"), client);
             entry.insert(client.clone());
             client
         };

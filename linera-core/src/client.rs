@@ -16,7 +16,6 @@ use dashmap::{
 };
 use futures::{
     future::{self, FusedFuture, Future},
-    lock::Mutex,
     stream::{self, AbortHandle, FusedStream, FuturesUnordered, StreamExt},
 };
 use linera_base::{
@@ -27,6 +26,7 @@ use linera_base::{
     },
     ensure,
     identifiers::{Account, ApplicationId, BlobId, BytecodeId, ChainId, MessageId, Owner},
+    locks::AsyncMutex,
     ownership::{ChainOwnership, TimeoutConfig},
 };
 use linera_chain::{
@@ -2301,9 +2301,9 @@ where
             .await
     }
 
-    /// Wraps this chain client into an `Arc<Mutex<_>>`.
-    pub fn into_arc(self) -> ArcChainClient<P, S> {
-        ArcChainClient::new(self)
+    /// Wraps this chain client into an [`AsyncMutex`].
+    pub fn into_arc(self, name: impl Into<String>) -> ArcChainClient<P, S> {
+        ArcChainClient::new(name, self)
     }
 }
 
@@ -2320,12 +2320,12 @@ enum ExecuteBlockOutcome {
     WaitForTimeout(RoundTimeout),
 }
 
-/// A chain client in an `Arc<Mutex<_>>`, so it can be used by different tasks and threads.
+/// A chain client in an [`AsyncMutex`], so it can be used by different tasks and threads.
 #[derive(Debug)]
-pub struct ArcChainClient<P, S>(pub Arc<Mutex<ChainClient<P, S>>>);
+pub struct ArcChainClient<P, S>(pub AsyncMutex<ChainClient<P, S>>);
 
 impl<P, S> Deref for ArcChainClient<P, S> {
-    type Target = Arc<Mutex<ChainClient<P, S>>>;
+    type Target = AsyncMutex<ChainClient<P, S>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -2339,8 +2339,8 @@ impl<P, S> Clone for ArcChainClient<P, S> {
 }
 
 impl<P, S> ArcChainClient<P, S> {
-    pub fn new(client: ChainClient<P, S>) -> Self {
-        Self(Arc::new(Mutex::new(client)))
+    pub fn new(name: impl Into<String>, client: ChainClient<P, S>) -> Self {
+        Self(AsyncMutex::new(name, client))
     }
 }
 

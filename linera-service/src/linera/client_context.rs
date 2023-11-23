@@ -11,11 +11,12 @@ use std::{
 use anyhow::Context;
 use async_trait::async_trait;
 use colored::Colorize;
-use futures::{lock::OwnedMutexGuard, Future};
+use futures::Future;
 use linera_base::{
     crypto::KeyPair,
     data_types::{BlockHeight, HashedBlob, Timestamp},
     identifiers::{Account, BlobId, BytecodeId, ChainId},
+    locks::OwnedAsyncMutexGuard,
     ownership::ChainOwnership,
 };
 use linera_chain::data_types::Certificate;
@@ -366,7 +367,7 @@ where
         mut f: F,
     ) -> anyhow::Result<T>
     where
-        F: FnMut(OwnedMutexGuard<ChainClient<NodeProvider, S>>) -> Fut,
+        F: FnMut(OwnedAsyncMutexGuard<ChainClient<NodeProvider, S>>) -> Fut,
         Fut: Future<Output = Result<ClientOutcome<T>, E>>,
         anyhow::Error: From<E>,
     {
@@ -400,7 +401,9 @@ where
         ownership_config: ChainOwnershipConfig,
     ) -> anyhow::Result<()> {
         let chain_id = chain_id.unwrap_or_else(|| self.default_chain());
-        let chain_client = self.make_chain_client(chain_id).into_arc();
+        let chain_client = self
+            .make_chain_client(chain_id)
+            .into_arc(format!("ChainClient({chain_id})"));
         info!("Changing ownership for chain {}", chain_id);
         let time_start = Instant::now();
         let ownership = ChainOwnership::try_from(ownership_config)?;
@@ -431,7 +434,9 @@ where
 {
     pub async fn process_inboxes_and_force_validator_updates(&mut self) {
         for chain_id in self.wallet().own_chain_ids() {
-            let chain_client = self.make_chain_client(chain_id).into_arc();
+            let chain_client = self
+                .make_chain_client(chain_id)
+                .into_arc(format!("ChainClient({chain_id})"));
             self.process_inbox(&chain_client).await.unwrap();
             chain_client.lock().await.update_validators().await.unwrap();
         }
