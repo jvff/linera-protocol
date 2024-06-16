@@ -158,6 +158,7 @@ where
             ("reentrancy", "setters") => self.reentrancy_setters(&mut instance),
             ("reentrancy", "operations") => self.reentrancy_operations(&mut instance),
             ("reentrancy", "global-state") => self.reentrancy_global_state(&mut instance),
+            ("reentrancy", "mixed-functions") => self.reentrancy_mixed_functions(&mut instance),
             _ => panic!(
                 "Attempt to load module \"{group}-{module}\" which has no mock configuration"
             ),
@@ -651,6 +652,28 @@ where
             },
             1,
         );
+    }
+
+    /// Mock the behavior of the "reentrancy-mixed-functions" module.
+    fn reentrancy_mixed_functions(&mut self, instance: &mut MockInstance<UserData>) {
+        self.mock_exported_function(
+            instance,
+            "witty-macros:test-modules/entrypoint#entrypoint",
+            |caller, _: HList![]| {
+                let hlist_pat![] = caller.call_imported_function(
+                    "witty-macros:test-modules/mixed-functions#with-caller",
+                    hlist![],
+                )?;
+                let hlist_pat![value]: HList![u32] = caller.call_imported_function(
+                    "witty-macros:test-modules/mixed-functions#without-caller",
+                    hlist![],
+                )?;
+                assert_eq!(value, 100);
+                Ok(hlist![])
+            },
+            1,
+        );
+        self.export_simple_function(instance);
     }
 
     /// Mocks an exported function with the provided `name`.

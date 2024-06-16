@@ -28,3 +28,9 @@ world reentrant-global-state {
     import get-host-value
     export global-state
 }
+
+world reentrant-mixed-functions {
+    import mixed-functions
+    export entrypoint
+    export simple-function
+}

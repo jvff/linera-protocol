@@ -1,0 +1,6 @@
+package witty-macros:test-modules
+
+interface mixed-functions {
+    with-caller: func()
+    without-caller: func() -> u32
+}
