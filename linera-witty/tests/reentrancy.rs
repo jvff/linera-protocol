@@ -434,14 +434,10 @@ where
     }
 }
 
-/// Test global state inside a Wasm guest accessed through reentrant functions.
+/// Test accessing the user data stored inside the [`Caller`] generic type.
 ///
-/// The host calls the entrypoint passing an integer argument which the guest stores in its global
-/// state. Before returning, the guest calls the host's `get-host-value` function in order to
-/// obtain the value to return. The host function calls the guest back to obtain the return value
-/// from the guest's global state.
-///
-/// The final value returned from the guest must match the initial value the host sent in.
+/// When the guest calls the host function, a flag stored inside the user data is set. Once the
+/// guest finishes executing, the flag is checked to ensure it's set.
 #[test_case(MockInstanceFactory::default(); "with a mock instance")]
 #[cfg_attr(with_wasmer, test_case(WasmerInstanceFactory::default(); "with Wasmer"))]
 #[cfg_attr(with_wasmtime, test_case(WasmtimeInstanceFactory::default(); "with Wasmtime"))]
