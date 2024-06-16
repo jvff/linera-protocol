@@ -515,6 +515,55 @@ fn test_mixed_functions_with_and_without_caller_parameter<InstanceFactory>(
         .expect("Failed to call guest's `entrypoint` function");
 }
 
+/// Type to export two functions, one with a generic caller type parameter and one without.
+pub struct ExportedMixedFunctionsWithAndWithoutCallerTypeParameter;
+
+#[wit_export(package = "witty-macros:test-modules", interface = "mixed-functions")]
+impl ExportedMixedFunctionsWithAndWithoutCallerTypeParameter {
+    fn with_caller<Caller>(caller: &mut Caller) -> Result<(), RuntimeError>
+    where
+        Caller: InstanceForImportedSimpleFunction,
+        <Caller::Runtime as Runtime>::Memory: RuntimeMemory<Caller>,
+    {
+        tracing::debug!("Before reentrant call");
+        ImportedSimpleFunction::new(&mut *caller).simple()?;
+        tracing::debug!("After reentrant call");
+        Ok(())
+    }
+
+    fn without_caller() -> Result<u32, RuntimeError> {
+        Ok(100)
+    }
+}
+
+/// Test if functions with and without caller type arguments can be exported to the guest.
+///
+/// Check that the guest can call two functions, where one of them is reentrant and the other is
+/// not.
+#[test_case(MockInstanceFactory::default(); "with a mock instance")]
+#[cfg_attr(with_wasmer, test_case(WasmerInstanceFactory::default(); "with Wasmer"))]
+#[cfg_attr(with_wasmtime, test_case(WasmtimeInstanceFactory::default(); "with Wasmtime"))]
+#[allow(clippy::bool_assert_comparison)]
+fn test_mixed_functions_with_and_without_caller_type_parameter<InstanceFactory>(
+    mut factory: InstanceFactory,
+) where
+    InstanceFactory: TestInstanceFactory,
+    InstanceFactory::Instance: InstanceForEntrypoint,
+    <<InstanceFactory::Instance as Instance>::Runtime as Runtime>::Memory:
+        RuntimeMemory<InstanceFactory::Instance>,
+    ExportedMixedFunctionsWithAndWithoutCallerTypeParameter: ExportTo<InstanceFactory::Builder>,
+{
+    let instance = factory
+        .load_test_module::<ExportedMixedFunctionsWithAndWithoutCallerTypeParameter>(
+            "reentrancy",
+            "mixed-functions",
+        );
+
+    Entrypoint::new(instance)
+        .entrypoint()
+        .expect("Failed to call guest's `entrypoint` function");
+}
+
 /// Test the generated [`WitInterface`] implementations for the types used in this test.
 #[test_case(PhantomData::<Entrypoint<MockInstance<()>>>, ENTRYPOINT; "of_entrypoint")]
 #[test_case(
