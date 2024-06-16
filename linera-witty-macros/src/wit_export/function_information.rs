@@ -18,6 +18,7 @@ pub struct FunctionInformation<'input> {
     pub(crate) function: &'input ImplItemFn,
     pub(crate) is_reentrant: bool,
     pub(crate) call_early_return: Option<Token![?]>,
+    type_has_caller_type_parameter: bool,
     wit_name: String,
     parameter_bindings: TokenStream,
     interface_type: TokenStream,
@@ -63,6 +64,7 @@ impl<'input> FunctionInformation<'input> {
             function,
             is_reentrant,
             call_early_return: is_fallible.then(|| Token![?](Span::call_site())),
+            type_has_caller_type_parameter: caller_type.is_some(),
             wit_name,
             parameter_bindings,
             interface_type,
@@ -252,6 +254,9 @@ impl<'input> FunctionInformation<'input> {
         let host_parameters = &self.parameter_bindings;
         let call_early_return = &self.call_early_return;
         let function_name = &self.function.sig.ident;
+        let caller_type_parameter = self
+            .type_has_caller_type_parameter
+            .then(|| quote! { ::<#caller> });
         let caller_parameter = self.is_reentrant.then(|| quote! { &mut caller, });
 
         let output_type = quote_spanned! { self.function.sig.output.span() =>
@@ -279,7 +284,7 @@ impl<'input> FunctionInformation<'input> {
                         )?;
 
                     #[allow(clippy::let_unit_value)]
-                    let host_results = #type_name::#function_name(
+                    let host_results = #type_name #caller_type_parameter::#function_name(
                         #caller_parameter
                         #host_parameters
                     ) #call_early_return;
