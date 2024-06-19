@@ -15,6 +15,7 @@ use linera_base::{
     data_types::{ArithmeticError, BlockHeight, HashedBlob, Round},
     doc_scalar, ensure,
     identifiers::{BlobId, ChainId, Owner},
+    locks::AsyncMutex,
 };
 use linera_chain::{
     data_types::{
@@ -32,7 +33,7 @@ use linera_views::views::ViewError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::{
-    sync::{oneshot, Mutex, OwnedRwLockReadGuard},
+    sync::{oneshot, OwnedRwLockReadGuard},
     task::JoinSet,
 };
 use tracing::{error, instrument, trace, warn};
@@ -283,9 +284,9 @@ pub struct WorkerState<StorageClient> {
     recent_hashed_blobs: Arc<ValueCache<BlobId, HashedBlob>>,
     /// One-shot channels to notify callers when messages of a particular chain have been
     /// delivered.
-    delivery_notifiers: Arc<Mutex<DeliveryNotifiers>>,
+    delivery_notifiers: AsyncMutex<DeliveryNotifiers>,
     /// The set of spawned [`ChainWorkerActor`] tasks.
-    chain_worker_tasks: Arc<Mutex<JoinSet<()>>>,
+    chain_worker_tasks: AsyncMutex<JoinSet<()>>,
 }
 
 pub(crate) type DeliveryNotifiers =
@@ -299,8 +300,8 @@ impl<StorageClient> WorkerState<StorageClient> {
             chain_worker_config: ChainWorkerConfig::default().with_key_pair(key_pair),
             recent_hashed_certificate_values: Arc::new(ValueCache::default()),
             recent_hashed_blobs: Arc::new(ValueCache::default()),
-            delivery_notifiers: Arc::default(),
-            chain_worker_tasks: Arc::default(),
+            delivery_notifiers: AsyncMutex::new("delivery_notifiers", DeliveryNotifiers::default()),
+            chain_worker_tasks: AsyncMutex::new("chain_worker_tasks", JoinSet::default()),
         }
     }
 

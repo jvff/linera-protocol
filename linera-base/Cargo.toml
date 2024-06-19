@@ -27,6 +27,7 @@ base64.workspace = true
 bcs.workspace = true
 cfg-if.workspace = true
 chrono.workspace = true
+dashmap.workspace = true
 ed25519-dalek.workspace = true
 generic-array.workspace = true
 getrandom = { workspace = true, optional = true }

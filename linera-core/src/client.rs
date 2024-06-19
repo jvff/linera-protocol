@@ -10,10 +10,10 @@ use std::{
     sync::Arc,
 };
 
-use dashmap::{
-    mapref::one::{Ref as DashMapRef, RefMut as DashMapRefMut},
-    DashMap,
-};
+// use dashmap::{
+// mapref::one::{Ref as DashMapRef, RefMut as DashMapRefMut},
+// DashMap,
+// };
 use futures::{
     future::{self, FusedFuture, Future},
     stream::{self, AbortHandle, FusedStream, FuturesUnordered, StreamExt},
@@ -28,6 +28,7 @@ use linera_base::{
     identifiers::{Account, ApplicationId, BlobId, BytecodeId, ChainId, MessageId, Owner},
     locks::AsyncMutex,
     ownership::{ChainOwnership, TimeoutConfig},
+    trash_map::{TracedRef as DashMapRef, TracedRefMut as DashMapRefMut, TrashMap as DashMap},
 };
 use linera_chain::{
     data_types::{

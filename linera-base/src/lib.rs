@@ -24,6 +24,7 @@ pub mod ownership;
 #[cfg(with_metrics)]
 pub mod prometheus_util;
 pub mod sync;
+pub mod trash_map;
 #[cfg(test)]
 mod unit_tests;
 
