@@ -180,7 +180,11 @@ impl<'input> From<&'_ wit_export::FunctionInformation<'input>> for FunctionInfor
         let inputs = signature
             .inputs
             .iter()
-            .skip(if exported_function.is_reentrant { 1 } else { 0 });
+            .skip(if exported_function.reentrancy.is_reentrant() {
+                1
+            } else {
+                0
+            });
 
         let mut output = signature.output.clone();
 

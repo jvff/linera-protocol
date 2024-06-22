@@ -16,7 +16,7 @@ use syn::{
 /// Pieces of information extracted from a function's definition.
 pub struct FunctionInformation<'input> {
     pub(crate) function: &'input ImplItemFn,
-    pub(crate) is_reentrant: bool,
+    pub(crate) reentrancy: Reentrancy,
     pub(crate) call_early_return: Option<Token![?]>,
     type_has_caller_type_parameter: bool,
     wit_name: String,
@@ -50,10 +50,9 @@ impl<'input> FunctionInformation<'input> {
     /// [`FunctionInformation`] instance.
     pub fn new(function: &'input ImplItemFn, caller_type: Option<&'input Ident>) -> Self {
         let wit_name = function.sig.ident.to_string().to_kebab_case();
-        let is_reentrant = Self::is_reentrant(&function.sig)
-            || Self::uses_caller_parameter(&function.sig, caller_type);
+        let reentrancy = Reentrancy::new(&function.sig, caller_type);
         let (parameter_bindings, parameter_types) =
-            Self::parse_parameters(is_reentrant, function.sig.inputs.iter());
+            Self::parse_parameters(reentrancy.is_reentrant(), function.sig.inputs.iter());
         let (results, is_fallible) = Self::parse_output(&function.sig.output);
 
         let interface_type = quote_spanned! { function.sig.span() =>
@@ -62,73 +61,13 @@ impl<'input> FunctionInformation<'input> {
 
         FunctionInformation {
             function,
-            is_reentrant,
+            reentrancy,
             call_early_return: is_fallible.then(|| Token![?](Span::call_site())),
             type_has_caller_type_parameter: caller_type.is_some(),
             wit_name,
             parameter_bindings,
             interface_type,
         }
-    }
-
-    /// Checks if a function should be considered as a reentrant function.
-    ///
-    /// A reentrant function has a generic type parameter that's used as the type of the first
-    /// parameter.
-    fn is_reentrant(signature: &Signature) -> bool {
-        if signature.generics.params.len() != 1 {
-            return false;
-        }
-
-        let Some(GenericParam::Type(generic_type)) = signature.generics.params.first() else {
-            return false;
-        };
-
-        Self::first_parameter_is_caller(signature, &generic_type.ident)
-    }
-
-    /// Checks if a function uses a `caller_type` in the first parameter.
-    ///
-    /// If it does, the function is assumed to be reentrant.
-    fn uses_caller_parameter(signature: &Signature, caller_type: Option<&Ident>) -> bool {
-        if let Some(caller_type) = caller_type {
-            Self::first_parameter_is_caller(signature, caller_type)
-        } else {
-            false
-        }
-    }
-
-    /// Checks if the type of a function's first parameter is the `caller_type`.
-    fn first_parameter_is_caller(signature: &Signature, caller_type: &Ident) -> bool {
-        let Some(first_parameter) = signature.inputs.first() else {
-            return false;
-        };
-
-        let FnArg::Typed(PatType {
-            ty: first_parameter_type,
-            ..
-        }) = first_parameter
-        else {
-            abort!(
-                first_parameter,
-                "`self` parameters aren't supported by Witty"
-            );
-        };
-
-        let Type::Reference(TypeReference {
-            mutability: Some(_),
-            elem: referenced_type,
-            ..
-        }) = &**first_parameter_type
-        else {
-            return false;
-        };
-
-        let Type::Path(TypePath { path, .. }) = &**referenced_type else {
-            return false;
-        };
-
-        path.is_ident(caller_type)
     }
 
     /// Parses a function's parameters and returns the generated code with a list ofbindings to the
@@ -257,7 +196,7 @@ impl<'input> FunctionInformation<'input> {
         let caller_type_parameter = self
             .type_has_caller_type_parameter
             .then(|| quote! { ::<#caller> });
-        let caller_parameter = self.is_reentrant.then(|| quote! { &mut caller, });
+        let caller_parameter = self.reentrancy.caller_parameter();
 
         let output_type = quote_spanned! { self.function.sig.output.span() =>
             <
@@ -299,6 +238,99 @@ impl<'input> FunctionInformation<'input> {
                     Ok(#guest_results_to_output)
                 }
             )?;
+        }
+    }
+}
+
+/// Helper type to determine the type of reentrancy of a function.
+pub enum Reentrancy {
+    NonReentrant,
+    WithCallerParameter,
+}
+
+impl Reentrancy {
+    /// Creates a new [`Reentrancy`] instance by inspecting the function's [`Signature`] and the
+    /// type's generic caller type parameter, if there is one.
+    pub fn new(signature: &Signature, caller_type: Option<&Ident>) -> Self {
+        if Self::has_caller_type_parameter(signature)
+            || Self::uses_caller_parameter(signature, caller_type)
+        {
+            Reentrancy::WithCallerParameter
+        } else {
+            Reentrancy::NonReentrant
+        }
+    }
+
+    /// Checks if a function has a custom generic caller type parameter.
+    ///
+    /// The generic type parameter that's used as the type of the first parameter of the function's
+    /// signature.
+    fn has_caller_type_parameter(signature: &Signature) -> bool {
+        if signature.generics.params.len() != 1 {
+            return false;
+        }
+
+        let Some(GenericParam::Type(generic_type)) = signature.generics.params.first() else {
+            return false;
+        };
+
+        Self::first_parameter_is_caller(signature, &generic_type.ident)
+    }
+
+    /// Checks if a function uses a `caller_type` in the first parameter.
+    ///
+    /// If it does, the function is assumed to be reentrant.
+    fn uses_caller_parameter(signature: &Signature, caller_type: Option<&Ident>) -> bool {
+        if let Some(caller_type) = caller_type {
+            Self::first_parameter_is_caller(signature, caller_type)
+        } else {
+            false
+        }
+    }
+
+    /// Checks if the type of a function's first parameter is the `caller_type`.
+    fn first_parameter_is_caller(signature: &Signature, caller_type: &Ident) -> bool {
+        let Some(first_parameter) = signature.inputs.first() else {
+            return false;
+        };
+
+        let FnArg::Typed(PatType {
+            ty: first_parameter_type,
+            ..
+        }) = first_parameter
+        else {
+            abort!(
+                first_parameter,
+                "`self` parameters aren't supported by Witty"
+            );
+        };
+
+        let Type::Reference(TypeReference {
+            mutability: Some(_),
+            elem: referenced_type,
+            ..
+        }) = &**first_parameter_type
+        else {
+            return false;
+        };
+
+        let Type::Path(TypePath { path, .. }) = &**referenced_type else {
+            return false;
+        };
+
+        path.is_ident(caller_type)
+    }
+
+    /// Returns [`true`] if the function was detected to be reentrant.
+    pub fn is_reentrant(&self) -> bool {
+        !matches!(self, Reentrancy::NonReentrant)
+    }
+
+    /// Returns the generated code for the caller parameter to use when calling the function.
+    pub fn caller_parameter(&self) -> Option<TokenStream> {
+        match self {
+            Reentrancy::NonReentrant => None,
+            Reentrancy::WithCallerParameter => Some(quote! { &mut caller, }),
         }
     }
 }
