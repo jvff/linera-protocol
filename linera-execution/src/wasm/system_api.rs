@@ -339,7 +339,7 @@ where
     }
 
     /// Logs a `message` with the provided information `level`.
-    fn log(_caller: &mut Caller, message: String, level: log::Level) -> Result<(), RuntimeError> {
+    fn log(message: String, level: log::Level) -> Result<(), RuntimeError> {
         match level {
             log::Level::Trace => tracing::trace!("{message}"),
             log::Level::Debug => tracing::debug!("{message}"),
@@ -514,7 +514,7 @@ where
     }
 
     /// Logs a `message` with the provided information `level`.
-    fn log(_caller: &mut Caller, message: String, level: log::Level) -> Result<(), RuntimeError> {
+    fn log(message: String, level: log::Level) -> Result<(), RuntimeError> {
         match level {
             log::Level::Trace => tracing::trace!("{message}"),
             log::Level::Debug => tracing::debug!("{message}"),
