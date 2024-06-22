@@ -8,15 +8,16 @@ use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{
-    spanned::Spanned, FnArg, GenericArgument, GenericParam, Ident, ImplItem, ImplItemFn, LitStr,
-    PatType, Path, PathArguments, PathSegment, ReturnType, Signature, Token, Type, TypePath,
-    TypeReference,
+    spanned::Spanned, FnArg, GenericArgument, Ident, ImplItem, ImplItemFn, LitStr, PatType, Path,
+    PathArguments, PathSegment, ReturnType, Signature, Token, Type, TypePath, TypeReference,
 };
+
+use super::CallerTypeParameter;
 
 /// Pieces of information extracted from a function's definition.
 pub struct FunctionInformation<'input> {
     pub(crate) function: &'input ImplItemFn,
-    pub(crate) reentrancy: Reentrancy,
+    pub(crate) reentrancy: Reentrancy<'input>,
     pub(crate) call_early_return: Option<Token![?]>,
     type_has_caller_type_parameter: bool,
     wit_name: String,
@@ -243,38 +244,22 @@ impl<'input> FunctionInformation<'input> {
 }
 
 /// Helper type to determine the type of reentrancy of a function.
-pub enum Reentrancy {
+pub enum Reentrancy<'input> {
     NonReentrant,
-    WithCallerParameter,
+    WithCallerParameter(Option<CallerTypeParameter<'input>>),
 }
 
-impl Reentrancy {
+impl<'input> Reentrancy<'input> {
     /// Creates a new [`Reentrancy`] instance by inspecting the function's [`Signature`] and the
     /// type's generic caller type parameter, if there is one.
-    pub fn new(signature: &Signature, caller_type: Option<&Ident>) -> Self {
-        if Self::has_caller_type_parameter(signature)
-            || Self::uses_caller_parameter(signature, caller_type)
-        {
-            Reentrancy::WithCallerParameter
+    pub fn new(signature: &'input Signature, caller_type: Option<&Ident>) -> Self {
+        if let Some(caller_parameter) = CallerTypeParameter::extract_from(&signature.generics) {
+            Reentrancy::WithCallerParameter(Some(caller_parameter))
+        } else if Self::uses_caller_parameter(signature, caller_type) {
+            Reentrancy::WithCallerParameter(None)
         } else {
             Reentrancy::NonReentrant
         }
-    }
-
-    /// Checks if a function has a custom generic caller type parameter.
-    ///
-    /// The generic type parameter that's used as the type of the first parameter of the function's
-    /// signature.
-    fn has_caller_type_parameter(signature: &Signature) -> bool {
-        if signature.generics.params.len() != 1 {
-            return false;
-        }
-
-        let Some(GenericParam::Type(generic_type)) = signature.generics.params.first() else {
-            return false;
-        };
-
-        Self::first_parameter_is_caller(signature, &generic_type.ident)
     }
 
     /// Checks if a function uses a `caller_type` in the first parameter.
@@ -330,7 +315,7 @@ impl Reentrancy {
     pub fn caller_parameter(&self) -> Option<TokenStream> {
         match self {
             Reentrancy::NonReentrant => None,
-            Reentrancy::WithCallerParameter => Some(quote! { &mut caller, }),
+            Reentrancy::WithCallerParameter(_) => Some(quote! { &mut caller, }),
         }
     }
 }
