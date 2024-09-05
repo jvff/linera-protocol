@@ -31,7 +31,7 @@ use lru::LruCache;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::{
-    sync::{mpsc, oneshot, OwnedRwLockReadGuard},
+    sync::{mpsc, oneshot, OwnedRwLockReadGuard, Mutex as AsyncMutex, OwnedMutexGuard as OwnedAsyncMutexGuard},
     task::JoinSet,
     time::{sleep, timeout},
 };
@@ -246,12 +246,14 @@ where
     /// The set of spawned [`ChainWorkerActor`] tasks.
     chain_worker_tasks: Arc<Mutex<JoinSet<()>>>,
     /// The cache of running [`ChainWorkerActor`]s.
-    chain_workers: Arc<Mutex<LruCache<ChainId, ChainActorEndpoint<StorageClient>>>>,
+    chain_workers: Arc<Mutex<LruCache<ChainId, ChainWorker<StorageClient>>>>,
 }
 
-/// The sender endpoint for [`ChainWorkerRequest`]s.
-type ChainActorEndpoint<StorageClient> =
-    mpsc::UnboundedSender<ChainWorkerRequest<<StorageClient as Storage>::Context>>;
+/// The shared reference to the chain worker.
+type ChainWorker<StorageClient> = Arc<AsyncMutex<ChainWorkerState<StorageClient>>>;
+
+/// The locked sender endpoint to a chain worker.
+type ChainWorkerEndpoint<StorageClient> = OwnedAsyncMutexGuard<ChainWorkerState<StorageClient>>;
 
 pub(crate) type DeliveryNotifiers =
     HashMap<ChainId, BTreeMap<BlockHeight, Vec<oneshot::Sender<()>>>>;
@@ -679,8 +681,8 @@ where
     async fn get_chain_worker_endpoint(
         &self,
         chain_id: ChainId,
-    ) -> Result<ChainActorEndpoint<StorageClient>, WorkerError> {
-        let (sender, new_receiver) = timeout(Duration::from_secs(3), async move {
+    ) -> Result<ChainWorkerEndpoint<StorageClient>, WorkerError> {
+        let chain_worker = timeout(Duration::from_secs(3), async move {
             loop {
                 match self.try_get_chain_worker_endpoint(chain_id) {
                     Some(endpoint) => break endpoint,
@@ -691,6 +693,8 @@ where
         })
         .await
         .map_err(|_| WorkerError::FullChainWorkerCache)?;
+
+        Ok(chain_worker.lock_owned().await)
 
         if let Some(receiver) = new_receiver {
             let actor = ChainWorkerActor::load(
@@ -716,14 +720,11 @@ where
     ///
     /// Returns [`None`] if the cache is full and no candidate for eviction was found.
     #[tracing::instrument(level = "trace", skip(self))]
-    #[allow(clippy::type_complexity)]
     fn try_get_chain_worker_endpoint(
         &self,
         chain_id: ChainId,
-    ) -> Option<(
-        ChainActorEndpoint<StorageClient>,
-        Option<mpsc::UnboundedReceiver<ChainWorkerRequest<StorageClient::Context>>>,
-    )> {
+    ) -> Option<ChainActorEndpoint<StorageClient>,
+    > {
         let mut chain_workers = self.chain_workers.lock().unwrap();
 
         if let Some(endpoint) = chain_workers.get(&chain_id) {
