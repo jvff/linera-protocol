@@ -73,63 +73,56 @@ impl<Runtime> SystemApiData<Runtime> {
 
 /// An implementation of the system API made available to contracts.
 #[derive(Default)]
-pub struct ContractSystemApi<Caller>(PhantomData<Caller>);
+pub struct ContractSystemApi<Runtime>(SystemApiData<Runtime>);
 
 #[wit_export(package = "linera:app")]
-impl<Caller, Runtime> ContractSystemApi<Caller>
+impl<Runtime> ContractSystemApi<Runtime>
 where
-    Caller: Instance<UserData = SystemApiData<Runtime>>,
     Runtime: ContractRuntime + 'static,
 {
     /// Returns the ID of the current chain.
-    fn get_chain_id(caller: &mut Caller) -> Result<ChainId, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn get_chain_id(&mut self) -> Result<ChainId, RuntimeError> {
+        self.0
             .runtime
             .chain_id()
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Returns the height of the current block that is executing.
-    fn get_block_height(caller: &mut Caller) -> Result<BlockHeight, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn get_block_height(&mut self) -> Result<BlockHeight, RuntimeError> {
+        self.0
             .runtime
             .block_height()
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Returns the ID of the current application.
-    fn get_application_id(caller: &mut Caller) -> Result<ApplicationId, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn get_application_id(&mut self) -> Result<ApplicationId, RuntimeError> {
+        self.0
             .runtime
             .application_id()
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Returns the application parameters provided when the application was created.
-    fn application_parameters(caller: &mut Caller) -> Result<Vec<u8>, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn application_parameters(&mut self) -> Result<Vec<u8>, RuntimeError> {
+        self.0
             .runtime
             .application_parameters()
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Returns the authenticated signer for this execution, if there is one.
-    fn authenticated_signer(caller: &mut Caller) -> Result<Option<Owner>, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn authenticated_signer(&mut self) -> Result<Option<Owner>, RuntimeError> {
+        self.0
             .runtime
             .authenticated_signer()
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Retrieves the current system time, i.e. the timestamp of the block in which this is called.
-    fn read_system_timestamp(caller: &mut Caller) -> Result<Timestamp, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn read_system_timestamp(&mut self) -> Result<Timestamp, RuntimeError> {
+        self.0
             .runtime
             .read_system_timestamp()
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -137,9 +130,8 @@ where
 
     /// Returns the ID of the incoming message that is being handled, or [`None`] if not executing
     /// an incoming message.
-    fn get_message_id(caller: &mut Caller) -> Result<Option<MessageId>, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn get_message_id(&mut self) -> Result<Option<MessageId>, RuntimeError> {
+        self.0
             .runtime
             .message_id()
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -148,74 +140,56 @@ where
     /// Returns `Some(true)` if the incoming message was rejected from the original destination and
     /// is now bouncing back, `Some(false)` if the message is being currently being delivered to
     /// its original destination, or [`None`] if not executing an incoming message.
-    fn message_is_bouncing(caller: &mut Caller) -> Result<Option<bool>, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn message_is_bouncing(&mut self) -> Result<Option<bool>, RuntimeError> {
+        self.0
             .runtime
             .message_is_bouncing()
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Returns the authenticated caller ID, if the caller configured it and if the current context.
-    fn authenticated_caller_id(caller: &mut Caller) -> Result<Option<ApplicationId>, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn authenticated_caller_id(&mut self) -> Result<Option<ApplicationId>, RuntimeError> {
+        self.0
             .runtime
             .authenticated_caller_id()
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Returns the current chain balance.
-    fn read_chain_balance(caller: &mut Caller) -> Result<Amount, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn read_chain_balance(&mut self) -> Result<Amount, RuntimeError> {
+        self.0
             .runtime
             .read_chain_balance()
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Returns the balance of one of the accounts on this chain.
-    fn read_owner_balance(caller: &mut Caller, owner: Owner) -> Result<Amount, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn read_owner_balance(&mut self, owner: Owner) -> Result<Amount, RuntimeError> {
+        self.0
             .runtime
             .read_owner_balance(owner)
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Schedules a message to be sent to this application on another chain.
-    fn send_message(
-        caller: &mut Caller,
-        message: SendMessageRequest<Vec<u8>>,
-    ) -> Result<(), RuntimeError> {
-        caller
-            .user_data_mut()
+    fn send_message(&mut self, message: SendMessageRequest<Vec<u8>>) -> Result<(), RuntimeError> {
+        self.0
             .runtime
             .send_message(message)
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Subscribes to a message channel from another chain.
-    fn subscribe(
-        caller: &mut Caller,
-        chain: ChainId,
-        channel: ChannelName,
-    ) -> Result<(), RuntimeError> {
-        caller
-            .user_data_mut()
+    fn subscribe(&mut self, chain: ChainId, channel: ChannelName) -> Result<(), RuntimeError> {
+        self.0
             .runtime
             .subscribe(chain, channel)
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Unsubscribes to a message channel from another chain.
-    fn unsubscribe(
-        caller: &mut Caller,
-        chain: ChainId,
-        channel: ChannelName,
-    ) -> Result<(), RuntimeError> {
-        caller
-            .user_data_mut()
+    fn unsubscribe(&mut self, chain: ChainId, channel: ChannelName) -> Result<(), RuntimeError> {
+        self.0
             .runtime
             .unsubscribe(chain, channel)
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -224,13 +198,12 @@ where
     /// Transfers an `amount` of native tokens from `source` owner account (or the current chain's
     /// balance) to `destination`.
     fn transfer(
-        caller: &mut Caller,
+        &mut self,
         source: Option<Owner>,
         destination: Account,
         amount: Amount,
     ) -> Result<(), RuntimeError> {
-        caller
-            .user_data_mut()
+        self.0
             .runtime
             .transfer(source, destination, amount)
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -238,22 +211,20 @@ where
 
     /// Claims an `amount` of native tokens from a `source` account to a `destination` account.
     fn claim(
-        caller: &mut Caller,
+        &mut self,
         source: Account,
         destination: Account,
         amount: Amount,
     ) -> Result<(), RuntimeError> {
-        caller
-            .user_data_mut()
+        self.0
             .runtime
             .claim(source, destination, amount)
             .map_err(|error| RuntimeError::Custom(error.into()))
     }
 
     /// Retrieves the owner configuration for the current chain.
-    fn get_chain_ownership(caller: &mut Caller) -> Result<ChainOwnership, RuntimeError> {
-        caller
-            .user_data_mut()
+    fn get_chain_ownership(&mut self) -> Result<ChainOwnership, RuntimeError> {
+        self.0
             .runtime
             .chain_ownership()
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -262,13 +233,12 @@ where
     /// Opens a new chain, configuring it with the provided `chain_ownership`,
     /// `application_permissions` and initial `balance` (debited from the current chain).
     fn open_chain(
-        caller: &mut Caller,
+        &mut self,
         chain_ownership: ChainOwnership,
         application_permissions: ApplicationPermissions,
         balance: Amount,
     ) -> Result<ChainId, RuntimeError> {
-        caller
-            .user_data_mut()
+        self.0
             .runtime
             .open_chain(chain_ownership, application_permissions, balance)
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -276,8 +246,8 @@ where
 
     /// Closes the current chain. Returns an error if the application doesn't have
     /// permission to do so.
-    fn close_chain(caller: &mut Caller) -> Result<Result<(), CloseChainError>, RuntimeError> {
-        match caller.user_data_mut().runtime.close_chain() {
+    fn close_chain(&mut self) -> Result<Result<(), CloseChainError>, RuntimeError> {
+        match self.0.runtime.close_chain() {
             Ok(()) => Ok(Ok(())),
             Err(ExecutionError::UnauthorizedApplication(_)) => {
                 Ok(Err(CloseChainError::NotPermitted))
@@ -288,13 +258,12 @@ where
 
     /// Calls another application.
     fn try_call_application(
-        caller: &mut Caller,
+        &mut self,
         authenticated: bool,
         callee_id: ApplicationId,
         argument: Vec<u8>,
     ) -> Result<Vec<u8>, RuntimeError> {
-        caller
-            .user_data_mut()
+        self.0
             .runtime
             .try_call_application(authenticated, callee_id, argument)
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -302,12 +271,11 @@ where
 
     /// Queries a service and returns the response.
     fn query_service(
-        caller: &mut Caller,
+        &mut self,
         application_id: ApplicationId,
         query: Vec<u8>,
     ) -> Result<Vec<u8>, RuntimeError> {
-        caller
-            .user_data_mut()
+        self.0
             .runtime
             .query_service(application_id, query)
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -315,13 +283,12 @@ where
 
     /// Makes a POST request to the given URL and returns the response body.
     fn http_post(
-        caller: &mut Caller,
+        &mut self,
         query: String,
         content_type: String,
         payload: Vec<u8>,
     ) -> Result<Vec<u8>, RuntimeError> {
-        caller
-            .user_data_mut()
+        self.0
             .runtime
             .http_post(&query, content_type, payload)
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -330,9 +297,8 @@ where
     /// Rejects the transaction if the current time at block validation is `>= timestamp`. Note
     /// that block validation happens at or after the block timestamp, but isn't necessarily the
     /// same.
-    fn assert_before(caller: &mut Caller, timestamp: Timestamp) -> Result<(), RuntimeError> {
-        caller
-            .user_data_mut()
+    fn assert_before(&mut self, timestamp: Timestamp) -> Result<(), RuntimeError> {
+        self.0
             .runtime
             .assert_before(timestamp)
             .map_err(|error| RuntimeError::Custom(error.into()))
@@ -354,9 +320,8 @@ where
     ///
     /// This is intended for the metering instrumentation, but if the user wants to donate
     /// some extra fuel, more power to them!
-    fn consume_fuel(caller: &mut Caller, fuel: u64) -> Result<(), RuntimeError> {
-        caller
-            .user_data_mut()
+    fn consume_fuel(&mut self, fuel: u64) -> Result<(), RuntimeError> {
+        self.0
             .runtime_mut()
             .consume_fuel(fuel)
             .map_err(|e| RuntimeError::Custom(e.into()))

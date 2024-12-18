@@ -311,6 +311,14 @@ impl<'input> Reentrancy<'input> {
         !matches!(self, Reentrancy::NonReentrant)
     }
 
+    /// Returns the [`Type`] used for custom user data inside the function's caller instance.
+    pub fn user_data(&self) -> Option<&'input Type> {
+        match self {
+            Reentrancy::NonReentrant | Reentrancy::WithCallerParameter(None) => None,
+            Reentrancy::WithCallerParameter(Some(caller)) => caller.user_data(),
+        }
+    }
+
     /// Returns the generated code for the caller parameter to use when calling the function.
     pub fn caller_parameter(&self) -> Option<TokenStream> {
         match self {

@@ -9,6 +9,8 @@
 mod caller_type_parameter;
 mod function_information;
 
+use std::convert;
+
 use proc_macro2::TokenStream;
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
@@ -60,14 +62,48 @@ impl<'input> WitExportGenerator<'input> {
             .map(|item| FunctionInformation::from_item(item, caller))
             .collect();
 
+        let user_data_type = Self::discover_user_data_type(&functions, &caller_type_parameter);
+
         WitExportGenerator {
             parameters,
             namespace,
             type_name,
             caller_type_parameter,
+            user_data_type,
             generics: &implementation.generics,
             implementation,
             functions,
+        }
+    }
+
+    /// Discovers the type to use for the custom user data.
+    fn discover_user_data_type(
+        functions: &Vec<FunctionInformation<'input>>,
+        caller: &Option<CallerTypeParameter<'input>>,
+    ) -> Type {
+        let mut user_data_types = functions
+            .iter()
+            .map(FunctionInformation::user_data)
+            .chain(caller.as_ref().map(CallerTypeParameter::user_data))
+            .filter_map(convert::identity);
+
+        if let Some(user_data_type) = user_data_types.next() {
+            if let Some(different_type) =
+                user_data_types.find(|candidate| candidate != user_data_type)
+            {
+                abort!(
+                    different_type,
+                    "Can't use different user data types in the same `#[wit_export]` call"
+                );
+            }
+
+            user_data_type.clone()
+        } else {
+            // Unit type
+            return Type::Tuple(TypeTuple {
+                paren_token: Paren::default(),
+                elems: Punctuated::new(),
+            });
         }
     }
 
@@ -204,18 +240,8 @@ impl<'input> WitExportGenerator<'input> {
     }
 
     /// Returns the type to use for the custom user data.
-    fn user_data_type(&self) -> Type {
-        self.caller_type_parameter
-            .as_ref()
-            .and_then(CallerTypeParameter::user_data)
-            .cloned()
-            .unwrap_or_else(|| {
-                // Unit type
-                Type::Tuple(TypeTuple {
-                    paren_token: Paren::default(),
-                    elems: Punctuated::new(),
-                })
-            })
+    fn user_data_type(&self) -> &Type {
+        &self.user_data_type
     }
 
     /// Generates the implementation of `WitInterface` for the type.
