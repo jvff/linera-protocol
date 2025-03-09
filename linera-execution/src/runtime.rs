@@ -6,6 +6,8 @@ use std::{
     mem,
     ops::{Deref, DerefMut},
     sync::{Arc, Mutex},
+    thread,
+    time::Instant,
 };
 
 use custom_debug_derive::Debug;
@@ -521,16 +523,50 @@ impl SyncRuntimeInternal<UserContractInstance> {
             next_block_height: self.height,
             local_time: self.local_time,
         };
-        let sender = self.execution_state_sender.clone();
+        let execution_state_sender = self.execution_state_sender.clone();
+        let (oracle_response_sender, oracle_response_receiver) = oneshot::channel();
+        let created_blobs = self.transaction_tracker.created_blobs().clone();
 
-        let txn_tracker = TransactionTracker::default()
-            .with_blobs(self.transaction_tracker.created_blobs().clone());
-        let mut service_runtime =
-            ServiceSyncRuntime::new_with_txn_tracker(sender, context, txn_tracker);
+        let timeout = self
+            .resource_controller
+            .remaining_service_oracle_execution_time()?;
+        thread::spawn(move || {
+            let txn_tracker = TransactionTracker::default().with_blobs(created_blobs);
+            let mut service_runtime = ServiceSyncRuntime::new_with_txn_tracker(
+                execution_state_sender,
+                context,
+                txn_tracker,
+            );
+            let result = service_runtime.run_query(application_id, query);
+
+            oracle_response_sender
+                .send(result)
+                .expect("Caller contract runtime should wait for the service oracle response");
+        });
+        let execution_start = Instant::now();
+
+        let timeout_result = oracle_response_receiver
+            .recv_timeout(timeout)
+            .map_err(|error| match error {
+                oneshot::RecvTimeoutError::Timeout => {
+                    ExecutionError::MaximumServiceOracleExecutionTimeExceeded
+                }
+                oneshot::RecvTimeoutError::Disconnected => {
+                    panic!("Runtime for service oracle execution should always send a response");
+                }
+            });
+
+        // Always track the execution time, irrespective to whether the service ran successfully or
+        // timed out
+        self.resource_controller
+            .track_service_oracle_execution(execution_start.elapsed())?;
+
+        let received_result = timeout_result?;
+
         let QueryOutcome {
             response,
             operations,
-        } = service_runtime.run_query(application_id, query)?;
+        } = received_result?;
 
         self.scheduled_operations.extend(operations);
         Ok(response)
