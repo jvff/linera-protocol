@@ -1,6 +1,8 @@
 // Copyright (c) Zefchain Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(unix)]
+use std::os::unix::thread::JoinHandleExt;
 use std::{
     collections::{hash_map, BTreeMap, HashMap, HashSet},
     mem,
@@ -530,7 +532,7 @@ impl SyncRuntimeInternal<UserContractInstance> {
         let timeout = self
             .resource_controller
             .remaining_service_oracle_execution_time()?;
-        thread::spawn(move || {
+        let handle = thread::spawn(move || {
             let txn_tracker = TransactionTracker::default().with_blobs(created_blobs);
             let mut service_runtime = ServiceSyncRuntime::new_with_txn_tracker(
                 execution_state_sender,
@@ -555,6 +557,11 @@ impl SyncRuntimeInternal<UserContractInstance> {
                     panic!("Runtime for service oracle execution should always send a response");
                 }
             });
+
+        #[cfg(unix)]
+        unsafe {
+            libc::pthread_cancel(handle.as_pthread_t())
+        };
 
         // Always track the execution time, irrespective to whether the service ran successfully or
         // timed out
